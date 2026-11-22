@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-23",
+  "environment": {
+    "node": "24.22.3",
+    "sqlite": "3.54.1",
+    "browser": "Google Chrome / Playwright",
+    "platform": "Windows"
+  },
+  "additionalRuntimeCheck": {
+    "date": "2026-11-23",
+    "node": "26.13.1",
+    "vite": "8.3.8",
+    "unitAndIntegrationTests": {
+      "status": "passed",
+      "count": 26
+    },
+    "typescriptAndProductionBuild": "passed",
+    "startupCheck": {
+      "status": "passed",
+      "node": "v26.13.1",
+      "sqliteVersion": "3.54.1",
+      "placeCount": 42,
+      "storage": "sqlite",
+      "homepageAndAddForm": true,
+      "browserErrors": []
+    },
+    "npmAuditVulnerabilities": 0
+  },
+  "unitAndIntegrationTests": {
+    "status": "passed",
+    "count": 26,
+    "command": "npm test"
+  },
+  "typescriptAndProductionBuild": {
+    "status": "passed",
+    "command": "npm run build"
+  },
+  "browserChecks": {
+    "status": "passed",
+    "count": 12,
+    "results": [
+      "無登入的本機首頁顯示42景點與四區入口",
+      "四區與42景點篩選正確",
+      "保留網路星等與可追溯心得",
+      "直接新增景點並只填評分即可存檔",
+      "短心得可修改清空，零元與分項分數正確保留",
+      "重新整理後仍讀取到實體SQLite資料",
+      "多個條件採交集並使用個人填答",
+      "新景點沒有來源星等時仍可比較",
+      "比較CSV匯出保留資料來源",
+      "JSON可匯出本機資料及選填心得",
+      "手機介面與表單沒有水平溢出",
+      "瀏覽器沒有未處理錯誤"
+    ],
+    "errors": []
+  },
+  "initialDatabase": {
+    "path": "data/travel.sqlite",
+    "tables": {
+      "app_meta": 1,
+      "destinations": 42,
+      "place_web_snapshots": 18,
+      "reviews": 0
+    },
+    "integrityCheck": "ok"
+  },
+  "report": {
+    "pages": 20,
+    "titleChecks": "passed",
+    "nonemptyPages": true,
+    "textCoverage": "passed"
+  },
+  "limits": [
+    "沒有進行真實使用者問卷或推薦準確率實驗",
+    "沒有進行多人帳號或效能壓力測試",
+    "沒有設定 API 金鑰，未進行真實模型端到端測試"
+  ]
+}

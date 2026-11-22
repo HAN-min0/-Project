@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {median,summarize,globalAverage,ruleSummary,validateReview,demoReviews,places} from '../lib/travel-data.ts';
+test('空樣本不產生假分數或假支出',()=>{const s=summarize('jiufen',[],4);assert.equal(s.avg,null);assert.equal(s.adjusted,null);assert.equal(s.cost,null)});
+test('中位數可處理偶數與極端值',()=>{assert.equal(median([100,110,120,90000]),115);assert.equal(median([7,1,3]),3);assert.equal(median([]),null)});
+test('單一五星會向全站平均收縮',()=>{const s=summarize('jiufen',[{...demoReviews[0],overall:5}],3);assert.ok(Math.abs(s.adjusted-(20/6))<1e-10);assert.equal(s.avg,5)});
+test('大量樣本對先驗的依賴較少',()=>{const r=Array.from({length:50},(_,i)=>({...demoReviews[0],id:String(i),overall:5}));assert.ok(summarize('jiufen',r,3).adjusted>summarize('jiufen',r.slice(0,1),3).adjusted)});
+test('名單擴充到四十二景點並保留原七十二則虛構心得',()=>{assert.equal(places.length,42);assert.equal(demoReviews.length,72);assert.ok(demoReviews.every(r=>r.demo));assert.ok(new Set(demoReviews.map(r=>r.id)).size===72)});
+test('示範資料的支出與平均值符合人工計算',()=>{const s=summarize('tamsui',demoReviews,globalAverage(demoReviews));assert.equal(s.n,4);assert.equal(s.cost,285);assert.equal(s.avg,4)});
+test('規則摘要每一個引用都能回查原評論',()=>{const rows=demoReviews.filter(r=>r.placeId==='jiufen');const s=ruleSummary(rows);assert.ok(s.points.length);for(const p of s.points)for(const id of p.reviewIds)assert.ok(rows.some(r=>r.id===id))});
+const valid={placeId:'jiufen',nickname:'測試者',overall:4,value:4,transport:3,environment:4,cost:100,content:'這是一則足夠長度的測試心得文字',tags:['交通方便']};
+test('拒絕非法分數 金額與文字內容',()=>{for(const change of [{overall:6},{cleanliness:0},{cost:-1},{cost:1.5},{cost:100001},{placeId:'missing'},{content:42},{content:'字'.repeat(1001)},{nickname:''},{overall:'5'}])assert.throws(()=>validateReview({...valid,...change}));assert.throws(()=>validateReview(null))});
+test('評論只接受已知標籤並清除重複值',()=>{const r=validateReview({...valid,tags:['交通方便','交通方便','未知內容']});assert.deepEqual(r.tags,['交通方便'])});
+test('關閉示範資料後只能計入使用者新增評論',()=>{const r={...demoReviews[0],id:'real-test',demo:false,overall:2,cost:0};const s=summarize('jiufen',[r],2);assert.equal(s.demoCount,0);assert.equal(s.realCount,1);assert.equal(s.avg,2);assert.equal(s.cost,0)});
