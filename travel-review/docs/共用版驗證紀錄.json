@@ -30,23 +30,57 @@
   },
   "databaseTestEngine": "local PGlite PostgreSQL, not a hosted database",
   "productionDeployment": {
-    "githubUpdated": false,
+    "githubUpdated": true,
     "supabaseCreated": true,
-    "renderDeployed": false,
-    "websiteUrl": null,
+    "renderDeployed": true,
+    "websiteUrl": "https://travel-review-hanmin0.onrender.com",
     "databaseDashboardUrl": "https://supabase.com/dashboard/project/hlyjdffarxstlgvsdtul/editor",
-    "supabaseProjectRef": "hlyjdffarxstlgvsdtul",
+    "renderDashboardUrl": "https://dashboard.render.com/web/srv-dc2288mq1p3s73bijat0",
+    "renderServiceId": "srv-dc2288mq1p3s73bijat0",
+    "renderRegion": "singapore",
     "supabaseRegion": "ap-northeast-1",
-    "schemaInitialized": true,
-    "initialDataCounts": {
-      "destinations": 42,
-      "reviews": 0,
-      "place_web_snapshots": 18
-    }
+    "verifiedApplicationCommit": "f4cb4da32658e4a170efc17b4ffb3f7ee1a68518",
+    "databaseCaConfigured": true,
+    "databaseCaSource": "https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt"
   },
   "limitations": [
-    "正式網站連線與公網部署尚未驗證",
     "匿名訪客沒有跨裝置帳號登入",
-    "未進行真實模型呼叫或推薦準確率實驗"
-  ]
+    "正式管理密碼登入由擁有者自行操作；本機已測試完整管理登入與六表檢視",
+    "未進行真實模型呼叫、使用者問卷或推薦準確率實驗",
+    "免費主機閒置後可能休眠，Supabase 免費專案可能因長期無活動暫停"
+  ],
+  "productionApiChecks": {
+    "checkedAt": "2026-11-23T11:46:06.533Z",
+    "origin": "https://travel-review-hanmin0.onrender.com",
+    "passed": 11,
+    "checks": [
+      "HTTPS health check reaches the shared database",
+      "Production HTML and content policy are served",
+      "Online PostgreSQL supplies the 42 initial destinations and 18 source snapshots",
+      "Anonymous ownership cookie is Secure and HttpOnly",
+      "Public responses exclude internal identity hashes and credentials",
+      "A second visitor reads a new rating with optional text, zero cost and missing fields preserved",
+      "Independent visitors retain separate ratings and edit ownership",
+      "Deleting a test visitor rating preserves the other visitor rating",
+      "Destination validation and password-protected admin endpoints are active",
+      "Cross-origin writes are rejected",
+      "Only the two temporary test visitors ratings were removed"
+    ],
+    "temporaryRatingsRemoved": true
+  },
+  "productionUiChecks": {
+    "origin": "https://travel-review-hanmin0.onrender.com",
+    "passed": 5,
+    "checks": [
+      "首頁載入42景點與線上共用資料庫標示",
+      "北部分區列出12個景點",
+      "景點介紹、特色、缺點、分項評分與選填心得正常顯示",
+      "公開網站可開啟新增景點表單",
+      "管理頁正確顯示密碼登入表單"
+    ]
+  },
+  "githubCI": {
+    "status": "success",
+    "url": "https://github.com/HAN-min0/-Project/actions/runs/45165135422"
+  }
 }

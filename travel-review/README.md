@@ -2,7 +2,7 @@
 
 這是 React + TypeScript + Vite 前端、Node.js HTTP 後端與 PostgreSQL 資料庫的旅遊評價系統。正式部署使用 Render Free 執行網站、Supabase Free 保存共用資料。GitHub 保存程式與資料表定義；實際景點與心得儲存在 Supabase。
 
-程式與部署設定已完成本機驗證。正式網站網址、Supabase 專案及遠端部署狀態，以實際帳號建立結果為準；下載程式碼不代表已經建立雲端服務。
+正式網站已於 2026-11-23 完成部署，可直接開啟 [線上 Demo](https://travel-review-hanmin0.onrender.com/)；[管理頁](https://travel-review-hanmin0.onrender.com/admin)使用擁有者在 Render 設定的管理密碼。使用者不需要下載、安裝 Node.js 或執行指令。不同裝置可讀取同一份共用資料，免費主機閒置後首次開啟可能需等待約一分鐘。
 
 ## 目前功能
 
@@ -20,6 +20,8 @@
 ## 正式部署
 
 完整操作見 [部署說明](docs/部署說明.md)。儲存庫根目錄的 `render.yaml` 已設定 `rootDir: travel-review`，符合目前 `HAN-min0/-Project` 的目錄結構。
+
+目前 Demo 使用 Render 的 Public Git Repository 手動部署方式，服務為 `travel-review-hanmin0`、Free、新加坡，資料庫位於 Supabase 東京。自動部署已關閉；日後更新程式碼後，需在 Render 使用 Manual Deploy → Deploy latest commit。以下 Blueprint 步驟是重新建立服務的另一種方式。
 
 1. 在自己的 Supabase 帳號建立專用 Free 專案。
 2. 從 Connect 複製 **Session pooler** 的 PostgreSQL URI，填入 Render 的 `DATABASE_URL`。URI 可保留 `[YOUR-PASSWORD]`；在 Render 的 `DATABASE_PASSWORD` 另填自己的資料庫密碼，程式會正確編碼特殊字元。
@@ -48,7 +50,7 @@
 
 六表為 `destinations`、`reviews`、`place_web_snapshots`、`app_meta`、`visitors`、`admin_sessions`。景點新增者及評價以訪客雜湊關聯；每個景點每位訪客可有一筆評價。公開 API 不回傳訪客雜湊或管理登入資料。瀏覽器不直接使用資料庫密碼，也不需要 Supabase 的 service-role key。
 
-資料表已啟用 RLS，未提供匿名 Data API 政策。資料由 Node.js 後端的 PostgreSQL 連線讀寫，Supabase 專案擁有者仍可使用 Table Editor 與 SQL Editor 管理。TLS 預設驗證伺服器憑證；如需專案提供的根憑證，可使用 `DATABASE_CA_CERT`。
+資料表已啟用 RLS，未提供匿名 Data API 政策。資料由 Node.js 後端的 PostgreSQL 連線讀寫，Supabase 專案擁有者仍可使用 Table Editor 與 SQL Editor 管理。TLS 驗證伺服器憑證。此 Supabase 專案需要官方根憑證，已在 Render 的 `DATABASE_CA_CERT` 設定完整 PEM 內容，並保留 `rejectUnauthorized: true`。官方下載來源見部署說明。
 
 ## 本機驗證
 
@@ -89,6 +91,8 @@ npm test
 npm run build
 ```
 
-已完成 43 項程式測試，以及 14 項瀏覽器檢查。PostgreSQL 查詢與權限測試使用本機 PGlite；另已在實際 Supabase 專案執行建表與初始資料，確認 42 景點、18 來源快照。Render 部署與公開網站連線仍須另行驗證。紀錄見 `docs/共用版驗證紀錄.json`。GitHub Actions 會在更新後執行測試與建置，Render 設定為檢查通過後自動部署。
+已完成 43 項程式測試、14 項本機瀏覽器檢查、11 項正式網站 API 與共用資料檢查，以及 5 項正式網站介面檢查。GitHub Actions 測試與建置亦已通過。正式檢查確認 HTTPS、Supabase 連線、兩個獨立訪客的評價共存、空白心得與零元支出、編輯與刪除所有權、跨來源拒絕，以及未登入管理頁的保護。兩位測試訪客的暫時評價已移除。紀錄見 `docs/共用版驗證紀錄.json`。
+
+管理者以正確正式密碼登入後的表格操作，仍由專案擁有者自行操作；本機驗證已涵蓋登入、登出與六表檢視。`docs/期末報告.pdf` 及可編輯 HTML 保留原本機 SQLite 版內容，線上版的技術與部署狀態請以本 README、部署說明及共用版驗證紀錄為準。
 
 `.gitignore` 排除套件、建置結果、實際 `.env`、SQLite 與本機 PGlite 資料。個人密碼與正式資料不放進 GitHub。免費方案的閒置休眠及額度以各平台目前規則為準，示範前請先確認網站與 Supabase 專案已喚醒。
