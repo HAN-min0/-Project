@@ -6,9 +6,10 @@ import {fileURLToPath} from 'node:url';
 import {places,validateReview} from '../lib/travel-data.ts';
 import {webReviewSnapshots} from '../lib/web-reviews.ts';
 import {validatePlace,placeKey} from '../lib/catalog-data.ts';
+import {InputError} from './errors.mjs';
+export {InputError};
 export const projectRoot=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export const defaultDatabasePath=path.join(projectRoot,'data','travel.sqlite');
-export class InputError extends Error {constructor(message,status=400){super(message);this.status=status;}}
 const checked=fn=>{try{return fn()}catch(e){throw new InputError(e.message)}};
 function publicPlace(r){return {id:r.id,name:r.name,region:r.region,city:r.city,district:r.district,address:r.address,category:r.category,description:r.description,features:JSON.parse(r.features),drawbacks:JSON.parse(r.drawbacks),source:r.source,tags:JSON.parse(r.tags),tone:r.tone,notice:r.notice??undefined,origin:r.origin,mine:r.origin==='community',createdAt:r.created_at};}
 function publicReview(r){return {id:r.id,placeId:r.place_id,nickname:r.nickname,overall:r.overall,transport:r.transport,parking:r.parking,cleanliness:r.cleanliness,facilities:r.facilities,vendors:r.vendors,scenery:r.scenery,cost:r.cost,content:r.content,tags:JSON.parse(r.tags),createdAt:r.updated_at,demo:false,mine:true};}

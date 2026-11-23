@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+data/*.sqlite*
+data/postgres-demo/
+data/*.key
+outputs/
+coverage/
+*.log
+.DS_Store

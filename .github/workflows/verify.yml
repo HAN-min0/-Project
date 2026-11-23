@@ -1,0 +1,31 @@
+name: Verify travel review
+on:
+  push:
+    paths:
+      - 'travel-review/**'
+      - '.github/workflows/verify.yml'
+      - 'render.yaml'
+  pull_request:
+    paths:
+      - 'travel-review/**'
+      - '.github/workflows/verify.yml'
+      - 'render.yaml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: travel-review
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: travel-review/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

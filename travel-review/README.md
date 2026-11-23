@@ -1,96 +1,94 @@
-# 旅評小站 個人旅遊評價系統
+# 旅評小站 共用線上版
 
-這是可上傳 GitHub、在自己電腦執行的完整專題。前端為 React + TypeScript + Vite，後端為 Node.js 原生 HTTP，資料庫透過 Node.js 24 的 `node:sqlite` 寫入 **`data/travel.sqlite`**。不需要 Sites、Cloudflare 帳號、ChatGPT 登入、MySQL 或額外資料庫伺服器。
+這是 React + TypeScript + Vite 前端、Node.js HTTP 後端與 PostgreSQL 資料庫的旅遊評價系統。正式部署使用 Render Free 執行網站、Supabase Free 保存共用資料。GitHub 保存程式與資料表定義；實際景點與心得儲存在 Supabase。
 
-## 啟動
+程式與部署設定已完成本機驗證。正式網站網址、Supabase 專案及遠端部署狀態，以實際帳號建立結果為準；下載程式碼不代表已經建立雲端服務。
 
-先安裝 Node.js 24 或 26，將整個專案解壓縮。Windows 可直接雙擊專案內的「啟動旅評小站.cmd」，它會自動切換到正確資料夾、安裝缺少的套件、建置並啟動服務。使用期間保留該命令視窗，結束時按 Ctrl+C。
+## 目前功能
 
-若使用終端機，請先進入同時有 `package.json` 和 `package-lock.json` 的 `travel-review` 資料夾，再依序執行，每行一個指令：
+- 北部 12、中部 10、南部 10、東部 10，共 42 個初始景點。
+- 景點介紹、特色、缺點、公開評價來源、六項細分評分與平均花費。
+- 18 筆已查核來源星等與 22 則公開心得改寫，查核日期 2026-11-22。
+- 多條件交集篩選、三景點比較、CSV 與 JSON 匯出。
+- 多個瀏覽器訪客共用景點和公開評價，各自可新增、更新與刪除自己的評價。
+- 文字心得可留空，沒有分項資料保存 NULL，明確零元支出保存 0。
+- `/admin` 提供有密碼保護的唯讀資料庫檢視，可查看資料表、欄位、筆數與分頁資料。
+- 正式 Supabase 專案亦可透過自己的 Dashboard → Table Editor 直接查看資料。
+
+匿名訪客以 HttpOnly Cookie 識別，沒有跨裝置帳號登入。同一暱稱不代表同一身分；換電腦或清除 Cookie 後會是新的訪客，之前發表的內容仍保存在共用資料庫。另一台電腦可看到公開內容，但不會自動取得舊訪客的編輯權。按「更新資料」或重新整理，可讀到其他訪客新增的內容，沒有實作即時推播。
+
+## 正式部署
+
+完整操作見 [部署說明](docs/部署說明.md)。儲存庫根目錄的 `render.yaml` 已設定 `rootDir: travel-review`，符合目前 `HAN-min0/-Project` 的目錄結構。
+
+1. 在自己的 Supabase 帳號建立專用 Free 專案。
+2. 從 Connect 複製 **Session pooler** 的 PostgreSQL URI，填入 Render 的 `DATABASE_URL`。URI 可保留 `[YOUR-PASSWORD]`；在 Render 的 `DATABASE_PASSWORD` 另填自己的資料庫密碼，程式會正確編碼特殊字元。
+3. 在 Render 建立 Blueprint，連接此儲存庫根目錄的 `render.yaml`。
+4. 填入 `SUPABASE_PROJECT_REF`；`ADMIN_PASSWORD` 由 Blueprint 產生，可在 Render 的 Environment 查看或更改。
+5. 部署完成後，用 Render 提供的 HTTPS 網址開啟網站，用同網址的 `/admin` 開啟資料庫檢視。
+
+正式 `npm start` 必須有 `DATABASE_URL`、至少 16 字元的 `ADMIN_PASSWORD`，以及網站網址。Render 自動提供 `RENDER_EXTERNAL_URL`，其他主機需設定 `PUBLIC_ORIGIN`。後端監聽 `0.0.0.0` 及主機提供的 `PORT`，健康檢查為 `/healthz`。
+
+資料庫初次啟動會建立六張表並匯入初始資料；之後啟動不會清空既有資料。正式模式缺少雲端連線時會停止啟動，避免將資料誤存到短暫的本機檔案。
+
+目前專用 Supabase 專案位於東京，已建立六張表與 42 個景點。專案擁有者可開啟 [實際資料表](https://supabase.com/dashboard/project/hlyjdffarxstlgvsdtul/editor)。中文名稱與心得可正常保存；官方 Dashboard 為英文，網站與本系統管理頁使用繁體中文。
+
+## 資料庫在哪裡
+
+| 位置 | 負責內容 |
+| --- | --- |
+| Supabase 專案的 PostgreSQL | 正式共用景點、心得、訪客識別與管理登入 |
+| Supabase Dashboard → Table Editor | 以專案擁有者身分查看資料表與實際內容 |
+| 網站 `/admin` | 管理者登入後的唯讀資料檢視 |
+| `server/cloud-schema.sql` | 六張 PostgreSQL 表、關聯、唯一值與 RLS 設定 |
+| `server/cloud-bootstrap.sql` | 可在專用新專案 SQL Editor 執行的完整建表與初始景點資料 |
+| `server/cloud-store.mjs` | 種子資料、參數化 SQL、共用讀寫、訪客所有權與管理查詢 |
+| `server/postgres.mjs` | pg 連線池、TLS 驗證、同一連線內的交易與本機測試引擎 |
+| `server/cloud.mjs` | 公網 HTTP、訪客 Cookie、管理者登入與 API |
+
+六表為 `destinations`、`reviews`、`place_web_snapshots`、`app_meta`、`visitors`、`admin_sessions`。景點新增者及評價以訪客雜湊關聯；每個景點每位訪客可有一筆評價。公開 API 不回傳訪客雜湊或管理登入資料。瀏覽器不直接使用資料庫密碼，也不需要 Supabase 的 service-role key。
+
+資料表已啟用 RLS，未提供匿名 Data API 政策。資料由 Node.js 後端的 PostgreSQL 連線讀寫，Supabase 專案擁有者仍可使用 Table Editor 與 SQL Editor 管理。TLS 預設驗證伺服器憑證；如需專案提供的根憑證，可使用 `DATABASE_CA_CERT`。
+
+## 本機驗證
+
+安裝 Node.js 24 或 26，在有 `package.json` 的資料夾執行：
 
 ```powershell
 npm ci
 npm run build
-npm start
+npm run demo
 ```
 
-開啟 `http://127.0.0.1:3000/`。初次啟動會建立資料庫、42 個景點及 18 筆網路評分快照，之後啟動不會重複加入。個人評價初始為空白，72 則虛構示範資料預設不啟用。按 Ctrl+C 停止。
+Windows 亦可雙擊 `啟動旅評小站.cmd`。開啟 `http://127.0.0.1:3000/`，管理頁為 `/admin`。未設定 `.env` 的 ADMIN_PASSWORD 時，本機驗證密碼為 `local-demo-admin-only`；此預設值僅用於明確指定的 `--demo`，正式模式不使用預設密碼。
 
-若錯誤訊息正在找 `C:\Users\你的名字\package.json`，代表終端機仍在使用者目錄，請改到專案資料夾再執行。不要在指令最後加上反斜線 `\`。報告中的原始測試環境為 Node.js 24；Node.js 26 是後續另外確認的相容執行環境。
+本機驗證使用 **PGlite 的真正 PostgreSQL 引擎**，資料保存在 `data/postgres-demo/`，介面清楚標示「本機驗證模式」。它不會自動連線 Supabase，亦不是 GitHub Pages 或跨電腦共用資料庫。開發可使用 `npm run dev`，網址為 `http://127.0.0.1:5173/`。
 
-開發時可改用 `npm run dev`，網址為 `http://127.0.0.1:5173/`，資料庫仍是同一個檔案。程式依自身所在的專案目錄決定資料庫位置，並非依終端機目前位置。可用 `.env` 的 `TRAVEL_DB_PATH` 指定其他位置。
+## 原 SQLite 版本與資料移轉
 
-## 資料庫寫在哪裡
+原本機版的 `server/index.mjs`、`server/database.mjs`、`server/schema.sql` 仍保留。建置後執行 `npm run local` 可使用原本的 `data/travel.sqlite`；它與正式雲端資料庫分開。舊說明保存在 `docs/本機SQLite版說明.md`。
 
-| 檔案 | 負責內容 |
-| --- | --- |
-| `data/travel.sqlite` | 實際的本機景點、評價、文字心得與來源快照 |
-| `server/database.mjs` | 開啟資料庫、初始匯入、參數化 SQL、新增、更新、刪除與匯入 |
-| `server/schema.sql` | 四個資料表、外鍵、唯一值與數值檢查 |
-| `server/index.mjs` | HTTP API 及前端檔案服務 |
-| `lib/travel-data.ts` | 42 個景點的初始來源、評分與篩選規則 |
-| `lib/web-reviews.ts` | 18 筆來源評分快照與 22 則公開心得改寫 |
-
-四表為 `destinations`、`reviews`、`place_web_snapshots`、`app_meta`。SQL 使用 `?` 綁定資料，資料庫啟用外鍵與 WAL。執行期間可能出現 `travel.sqlite-wal` 和 `travel.sqlite-shm`，正常結束程式會執行 checkpoint。備份前先停止程式，再複製資料庫檔案，或使用網站「匯出目前資料」下載 JSON。
-
-## 功能
-
-- 北部 12、中部 10、南部 10、東部 10 個內建景點。
-- 介紹、特色、缺點、參考連結與公開評價來源。
-- 交通、停車、整潔、設施、攤販、風景六項評分；沒有資料不視為零分。
-- 每人餐飲、活動及購物金額的算術平均，區分沒有與零元。
-- 好停車、交通便利、風景好看及低花費條件採同時符合。
-- 可新增景點；名稱、地區、縣市及類型必填，其餘選填。
-- 每個景點保留一筆本機個人評價，可更新或刪除；文字心得可空白或簡短填寫。
-- 最多三景點比較、CSV 與 JSON 匯出。
-
-這是單人本機使用版本，沒有多人帳號及登入機制，所有本機個人評價都可由本機操作者管理。服務僅監聽 `127.0.0.1`；本機 API 仍驗證來源與輸入。若日後改成多人網路服務，需要重新設計身分、權限及部署方式。
-
-## 資料與匯入
-
-網路評價來自可查公開網頁及搜尋快照，查核日期為 2026-11-22。18 個景點有整體星等，24 個新增內建景點沒有已查核星等時顯示沒有。22 則文字是少量心得改寫，保留原作者與來源；不是完整爬取平台資料集，也不是持續同步。部分來源範圍或到訪日期與現況不同，介面保留說明。
-
-網路整體評分不換算交通或停車等細項，也不與個人評價合併。虛構示範資料預設關閉，不能作為真實旅客研究。個人版一個景點只有一筆個人評價，個人平均在未啟用示範時通常就是該次填答，沒有多人群體代表性。
-
-把網站匯出的 JSON 移到另一台電腦後，可執行：
+舊版個人 JSON 可由管理者在已設定雲端環境的終端機匯入：
 
 ```powershell
-npm run db:import -- "C:\資料夾\旅評小站資料.json"
+npm run db:import-cloud -- "C:\資料夾\舊版個人資料.json"
 ```
 
-匯入會依縣市與正規化名稱合併景點，匯入個人評價，同景點已有個人評價時會更新；虛構示範資料跳過。任一筆格式錯誤會回滾整批，匯入前請備份。可讀取先前網站的匯出 JSON，但不另外匯入該檔中未查核的網路來源快照，原始內建快照仍保留。
+匯入會去重、排除虛構示範並以交易回滾錯誤，舊紀錄歸入獨立匯入身分，保留公開閱讀。這不是多人備份還原工具；共用版完整備份請使用 PostgreSQL 資料庫備份。網站 JSON 匯出不含訪客 Cookie 與管理登入，不能恢復原訪客的編輯權。
 
-要產生沒有個人評價的初始資料庫供報告展示：
+## AI 與來源
 
-```powershell
-npm run db:export-initial -- outputs/travel-initial.sqlite
-```
+未設定金鑰時提供規則統計。共用版一般訪客一律使用規則；管理者已登入且後端設定 OPENAI_API_KEY 時，才允許模型呼叫。每次最多最近 30 則心得，輸出引用需能對應資料 ID。交付前沒有設定真實 API 金鑰，也沒有完成模型語意效果實驗。
 
-輸出檔案若已存在會拒絕覆寫。
+72 則虛構示範評論預設關閉，不會匯入正式評價表。網路整體星等、公開短文改寫與本站細項評價分開呈現；缺少資料不填造假分數。來源日期、作者與連結仍保留。
 
-## GitHub
-
-上傳原始碼、`package.json`、`package-lock.json`、README、測試和初始資料程式。`.gitignore` 已排除 `node_modules`、`dist`、實際 SQLite 檔案與 `.env`，換電腦後執行 `npm ci` 即可重建。需要保留個人新增內容時另行備份 SQLite 或 JSON，GitHub 不會自動保存被排除的資料檔。
-
-GitHub 儲存庫保存程式碼；GitHub Pages 是靜態網站服務，不能直接執行此 Node.js 後端或代管可寫入的 SQLite 檔案。本次使用方式是從 GitHub 下載後在本機啟動。若將來要線上使用，需另找支援 Node.js 與持久磁碟的主機。
-
-## 期末報告
-
-`docs/期末報告.pdf` 為已檢查分頁的 20 頁報告；`docs/期末報告_可編輯.html` 可直接用瀏覽器開啟，按「啟用編輯」修改、按「儲存 HTML」保存，或列印成 PDF。封面的姓名、學號、課程、指導老師與 GitHub 網址請自行補齊。報告依使用者提供的範例章節編排，內容對應本機版的實際程式、資料庫及驗證結果。
-
-`docs/驗證紀錄.json` 記錄交付前的測試範圍與初始資料筆數。自動測試可用 `npm test` 重跑；瀏覽器操作檢查是交付時的實際觀察紀錄。
-
-## AI 摘要
-
-未設定金鑰時，系統使用規則標籤統計，不呼叫模型。AI 接口保留在 `server/summary.mjs`；如自行設定 `.env` 中的 `OPENAI_API_KEY`，可另設定 `OPENAI_MODEL`，預設範例是 `gpt-4.1-mini`。實際可用模型與費用以 API 專案為準，金鑰不要放入前端或 GitHub。
-
-啟用時只送出所選景點最多 30 筆評價，`store:false`，輸出引用需對應資料 ID。交付時沒有設定金鑰，未做真實模型端到端測試，不把規則統計稱為 AI 實測結果。
-
-## 檢查
+## 測試與版本管理
 
 ```powershell
 npm test
 npm run build
 ```
 
-自動測試涵蓋來源資料、未知分數、實體 SQLite 保存、新增景點、空白心得、更新、去重、匯入交易與本機 API。另以瀏覽器檢查桌面及手機介面。測試結果用於功能驗證，沒有進行真實使用者問卷或推薦品質實驗。
+已完成 43 項程式測試，以及 14 項瀏覽器檢查。PostgreSQL 查詢與權限測試使用本機 PGlite；另已在實際 Supabase 專案執行建表與初始資料，確認 42 景點、18 來源快照。Render 部署與公開網站連線仍須另行驗證。紀錄見 `docs/共用版驗證紀錄.json`。GitHub Actions 會在更新後執行測試與建置，Render 設定為檢查通過後自動部署。
+
+`.gitignore` 排除套件、建置結果、實際 `.env`、SQLite 與本機 PGlite 資料。個人密碼與正式資料不放進 GitHub。免費方案的閒置休眠及額度以各平台目前規則為準，示範前請先確認網站與 Supabase 專案已喚醒。

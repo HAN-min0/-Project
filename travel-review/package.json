@@ -1,25 +1,30 @@
 {
-  "name": "travel-review-local",
-  "version": "1.0.0",
+  "name": "travel-review-shared",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "engines": {
     "node": "^24.0.0 || ^26.0.0"
   },
   "scripts": {
-    "dev": "node --env-file-if-exists=.env server/index.mjs --dev",
+    "dev": "node --env-file-if-exists=.env server/cloud.mjs --demo --dev",
     "build": "tsc --noEmit && vite build",
-    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "start": "node --env-file-if-exists=.env server/cloud.mjs",
+    "demo": "node --env-file-if-exists=.env server/cloud.mjs --demo",
+    "local": "node --env-file-if-exists=.env server/index.mjs",
     "test": "node --test tests/*.test.mjs",
     "db:export-initial": "node scripts/export-initial.mjs",
-    "db:import": "node scripts/import-json.mjs"
+    "db:import": "node scripts/import-json.mjs",
+    "db:import-cloud": "node --env-file-if-exists=.env scripts/import-cloud-json.mjs"
   },
   "dependencies": {
     "lucide-react": "1.31.0",
+    "pg": "8.23.1",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.17",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

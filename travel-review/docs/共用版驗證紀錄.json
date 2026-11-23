@@ -1,0 +1,52 @@
+{
+  "date": "2026-11-23",
+  "basedOnCommit": "30e1b0dada257d641b2a3aad29d5f60d68836ea5",
+  "targetRepository": "https://github.com/HAN-min0/-Project",
+  "unitAndIntegrationTests": {
+    "passed": 43,
+    "legacyAndCore": 26,
+    "sharedPostgres": 17,
+    "runtime": "Node.js 24.22.3"
+  },
+  "browserChecks": {
+    "passed": 14,
+    "results": [
+      "首頁42景點與四區入口，清楚標示本機驗證模式",
+      "訪客甲可新增景點並只填分數，空白心得與零元保存",
+      "獨立瀏覽器乙可看到甲的新增景點與公開評價",
+      "乙可留下獨立評價，公開資料不包含訪客身分雜湊",
+      "甲可修改與清空自己的心得，乙的評價保持獨立",
+      "刪除自己的評價後，其他訪客的紀錄仍保留",
+      "條件推薦使用多位訪客的細項平均，交集結果正確",
+      "新增景點可比較與匯出CSV，沒有網路星等時保持沒有",
+      "JSON匯出明確記錄實際儲存引擎及共用評價",
+      "資料庫管理需登入，登入後顯示六張真實資料表與筆數",
+      "管理者能查看共用評價內容與欄位型別",
+      "資料表分頁顯示25筆及剩餘18筆",
+      "網站與管理頁在手機寬度可操作且沒有整頁水平溢出",
+      "管理者登出後權限失效，瀏覽器沒有未處理錯誤"
+    ],
+    "errors": []
+  },
+  "databaseTestEngine": "local PGlite PostgreSQL, not a hosted database",
+  "productionDeployment": {
+    "githubUpdated": false,
+    "supabaseCreated": true,
+    "renderDeployed": false,
+    "websiteUrl": null,
+    "databaseDashboardUrl": "https://supabase.com/dashboard/project/hlyjdffarxstlgvsdtul/editor",
+    "supabaseProjectRef": "hlyjdffarxstlgvsdtul",
+    "supabaseRegion": "ap-northeast-1",
+    "schemaInitialized": true,
+    "initialDataCounts": {
+      "destinations": 42,
+      "reviews": 0,
+      "place_web_snapshots": 18
+    }
+  },
+  "limitations": [
+    "正式網站連線與公網部署尚未驗證",
+    "匿名訪客沒有跨裝置帳號登入",
+    "未進行真實模型呼叫或推薦準確率實驗"
+  ]
+}

@@ -29,9 +29,10 @@ echo 正在建置旅評小站...
 call npm.cmd run build
 if errorlevel 1 goto failed
 echo.
+echo 這是本機驗證模式。正式線上展示請使用 Render 提供的網址。
 echo 啟動後請在瀏覽器開啟 http://127.0.0.1:3000/
 echo 使用期間請保持此視窗開啟，停止時按 Ctrl+C。
-call npm.cmd start
+call npm.cmd run demo
 if errorlevel 1 goto failed
 exit /b 0
 :failed
