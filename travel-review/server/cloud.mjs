@@ -63,7 +63,19 @@ export async function createSharedServer({store,origin,isDemo=false,adminPasswor
         const h=adminHash(req);if(h)await store.deleteAdminSession(h);res.setHeader('Set-Cookie',cookie('travel_admin','',secure,0));return json(res,200,{ok:true});
       }
       if(url.pathname.startsWith('/api/admin/')){
-        await requireAdmin(req);if(method!=='GET')return json(res,405,{error:'資料庫檢視為唯讀。'});
+        await requireAdmin(req);
+        const record=/^\/api\/admin\/records\/([^/]+)\/([^/]+)$/.exec(url.pathname);
+        if(record){
+          const table=decodeURIComponent(record[1]),id=decodeURIComponent(record[2]);
+          if(method==='GET')return json(res,200,await store.previewAdminDeletion(table,id));
+          if(method==='DELETE'){
+            limit('admin-delete:'+adminHash(req),30);
+            const body=await readBody(req);
+            return json(res,200,await store.deleteAdminRecord(table,id,body?.revision));
+          }
+          return json(res,405,{error:'不支援的操作。'});
+        }
+        if(method!=='GET')return json(res,405,{error:'請使用景點或評價的刪除功能。'});
         if(url.pathname==='/api/admin/overview')return json(res,200,{...await store.metadata(),mode:isDemo?'local-demo':'online',dashboardUrl:/^[a-z0-9]{12,32}$/.test(projectRef)?`https://supabase.com/dashboard/project/${projectRef}/editor`:null});
         if(url.pathname.startsWith('/api/admin/tables/'))return json(res,200,await store.tableRows(decodeURIComponent(url.pathname.slice('/api/admin/tables/'.length)),Number(url.searchParams.get('limit')||25),Number(url.searchParams.get('offset')||0)));
         return json(res,404,{error:'找不到管理介面。'});
