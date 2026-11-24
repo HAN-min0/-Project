@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 import {places,validateReview} from '../lib/travel-data.ts';
 import {webReviewSnapshots} from '../lib/web-reviews.ts';
 import {validatePlace,placeKey} from '../lib/catalog-data.ts';
@@ -7,6 +7,7 @@ import {InputError} from './errors.mjs';
 
 export {InputError};
 export const TABLES=['destinations','reviews','place_web_snapshots','app_meta','visitors','admin_sessions'];
+export const DELETABLE_TABLES=['destinations','reviews'];
 const orders={destinations:'created_at DESC, id',reviews:'updated_at DESC, id',place_web_snapshots:'place_id',app_meta:'key',visitors:'created_at DESC, actor_hash',admin_sessions:'created_at DESC, session_hash'};
 const iso=value=>value instanceof Date?value.toISOString():value;
 const array=value=>typeof value==='string'?JSON.parse(value):value;
@@ -35,6 +36,50 @@ export async function openSharedStore(driver){
   });
   async function requireActor(actorHash){
     if(!actorValid(actorHash)||!(await driver.query('SELECT 1 FROM visitors WHERE actor_hash=$1',[actorHash])).rows.length)throw new InputError('請重新整理網頁以建立訪客身分。',401);
+  }
+  function deletionTarget(table,id){
+    if(!DELETABLE_TABLES.includes(table))throw new InputError('此資料表不開放刪除。',403);
+    if(typeof id!=='string'||!/^[-a-zA-Z0-9_]{1,100}$/.test(id))throw new InputError('資料識別碼不正確。');
+  }
+  async function deletionState(client,table,id,lock=false){
+    deletionTarget(table,id);
+    let place,review;
+    if(table==='reviews'){
+      review=(await client.query('SELECT * FROM reviews WHERE id=$1',[id])).rows[0];
+      if(!review)throw new InputError('這筆評價已不存在，請重新讀取資料。',404);
+    }
+    // Lock parents before children. This also blocks new foreign-key references
+    // while the destination and its dependent rows are deleted atomically.
+    place=(await client.query('SELECT * FROM destinations WHERE id=$1'+(lock?' FOR UPDATE':''),[review?.place_id??id])).rows[0];
+    if(!place)throw new InputError('這個景點已不存在，請重新讀取資料。',404);
+    let reviews=[],snapshots=[];
+    if(table==='destinations'){
+      reviews=(await client.query('SELECT * FROM reviews WHERE place_id=$1 ORDER BY id'+(lock?' FOR UPDATE':''),[id])).rows;
+      snapshots=(await client.query('SELECT * FROM place_web_snapshots WHERE place_id=$1'+(lock?' FOR UPDATE':''),[id])).rows;
+    }else{
+      review=(await client.query('SELECT * FROM reviews WHERE id=$1'+(lock?' FOR UPDATE':''),[id])).rows[0];
+      if(!review)throw new InputError('這筆評價已不存在，請重新讀取資料。',404);
+      reviews=[review];
+    }
+    const revision=createHash('sha256').update(JSON.stringify({table,place,reviews,snapshots})).digest('hex');
+    return {table,id,title:table==='destinations'?place.name:`${review.nickname} 的評價`,placeName:place.name,
+      content:table==='reviews'?review.content:null,
+      counts:{destinations:table==='destinations'?1:0,reviews:reviews.length,place_web_snapshots:snapshots.length},revision};
+  }
+  const previewAdminDeletion=(table,id)=>driver.transaction(tx=>deletionState(tx,table,id));
+  async function deleteAdminRecord(table,id,revision){
+    deletionTarget(table,id);
+    if(typeof revision!=='string'||!/^[a-f0-9]{64}$/.test(revision))throw new InputError('請先查看刪除內容，再確認刪除。');
+    return driver.transaction(async tx=>{
+      const current=await deletionState(tx,table,id,true);
+      if(current.revision!==revision)throw new InputError('資料已更新，請重新查看刪除範圍並確認。',409);
+      if(table==='destinations'){
+        await tx.query('DELETE FROM reviews WHERE place_id=$1',[id]);
+        await tx.query('DELETE FROM place_web_snapshots WHERE place_id=$1',[id]);
+        await tx.query('DELETE FROM destinations WHERE id=$1',[id]);
+      }else await tx.query('DELETE FROM reviews WHERE id=$1',[id]);
+      return {deleted:true,table,id,title:current.title,counts:current.counts};
+    });
   }
   async function createPlace(raw,actorHash){
     await requireActor(actorHash);const p=checked(()=>validatePlace(raw));
@@ -69,7 +114,7 @@ export async function openSharedStore(driver){
     const tables=[];
     for(const name of TABLES){const count=await driver.query(`SELECT COUNT(*)::int AS count FROM "${name}"`);tables.push({name,count:count.rows[0].count,columns:schema.rows.filter(c=>c.table_name===name).map(c=>({name:c.column_name,type:c.data_type,nullable:c.is_nullable==='YES',primaryKey:c.primary_key}))});}
     const info=await driver.query('SELECT current_database() AS name, version() AS version');
-    return {storage:driver.kind,database:info.rows[0],tables,readOnly:true};
+    return {storage:driver.kind,database:info.rows[0],tables,readOnly:false,deletableTables:DELETABLE_TABLES};
   };
   return {kind:driver.kind,createPlace,importData,
     touchVisitor:actorHash=>{if(!actorValid(actorHash))throw new InputError('訪客格式不正確。');return driver.query('INSERT INTO visitors(actor_hash) VALUES($1) ON CONFLICT(actor_hash) DO UPDATE SET last_seen_at=NOW()',[actorHash]);},
@@ -78,7 +123,7 @@ export async function openSharedStore(driver){
     webSnapshots:async()=>(await driver.query('SELECT data FROM place_web_snapshots ORDER BY place_id')).rows.map(r=>typeof r.data==='string'?JSON.parse(r.data):r.data),
     saveReview:async(raw,actorHash)=>{await requireActor(actorHash);return writeReview(driver,raw,actorHash);},
     deleteReview:async(placeId,actorHash)=>{await requireActor(actorHash);const r=await driver.query('DELETE FROM reviews WHERE place_id=$1 AND actor_hash=$2 RETURNING id',[placeId,actorHash]);return {deleted:r.rows.length>0};},
-    metadata,
+    metadata,previewAdminDeletion,deleteAdminRecord,
     tableRows:async(name,limit=25,offset=0)=>{if(!TABLES.includes(name))throw new InputError('找不到這個資料表。',404);if(!Number.isInteger(limit)||limit<1||limit>50||!Number.isInteger(offset)||offset<0||offset>1000000)throw new InputError('分頁參數不正確。');const count=await driver.query(`SELECT COUNT(*)::int AS count FROM "${name}"`);const r=await driver.query(`SELECT * FROM "${name}" ORDER BY ${orders[name]} LIMIT $1 OFFSET $2`,[limit,offset]);return {table:name,total:count.rows[0].count,limit,offset,rows:r.rows};},
     createAdminSession:async hash=>{await driver.query('DELETE FROM admin_sessions WHERE expires_at<=NOW()');await driver.query("INSERT INTO admin_sessions(session_hash,expires_at) VALUES($1,NOW()+INTERVAL '8 hours')",[hash]);},
     hasAdminSession:async hash=>(await driver.query('SELECT 1 FROM admin_sessions WHERE session_hash=$1 AND expires_at>NOW()',[hash])).rows.length>0,
