@@ -85,7 +85,7 @@ test('管理頁 API 需要登入，密碼不回傳，登出與過期會失效',a
  const a=client();assert.equal((await a('/api/admin/overview')).status,401);
  assert.equal((await a('/api/admin/login',{method:'POST',body:{password:'wrong'}})).status,401);
  const login=await a('/api/admin/login',{method:'POST',body:{password}});assert.equal(login.status,200);assert.ok(!JSON.stringify(login.data).includes(password));assert.match(login.headers.get('set-cookie'),/HttpOnly/);
- const info=await a('/api/admin/overview');assert.equal(info.data.tables.length,6);assert.equal(info.data.readOnly,true);
+ const info=await a('/api/admin/overview');assert.equal(info.data.tables.length,6);assert.equal(info.data.readOnly,false);assert.deepEqual(info.data.deletableTables,['destinations','reviews']);
  assert.equal((await a('/api/admin/tables/reviews',{method:'POST',body:{}})).status,405);
  assert.equal((await a('/api/admin/tables/reviews?limit=1000')).status,400);
  await a('/api/admin/logout',{method:'POST',body:{}});assert.equal((await a('/api/admin/overview')).status,401);
